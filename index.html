@@ -41,7 +41,7 @@
 
     .subtitle {
       color: #6b7280;
-      margin-bottom: 35px;
+      margin-bottom: 25px;
     }
 
     .button {
@@ -56,6 +56,33 @@
 
     .button:hover {
       background: #374151;
+    }
+
+    .status {
+      margin: 20px 0;
+      padding: 15px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+    }
+
+    .status-title {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .status-text {
+      color: #6b7280;
+    }
+
+    .status.success {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+
+    .status.error {
+      background: #fef2f2;
+      border-color: #fecaca;
     }
 
     .projects {
@@ -73,30 +100,49 @@
     .project-name {
       font-size: 18px;
       font-weight: bold;
+      margin-bottom: 8px;
     }
 
     .project-id {
       color: #6b7280;
       font-size: 13px;
-      margin-top: 6px;
       font-family: monospace;
+    }
+
+    .project-key {
+      color: #374151;
+      font-size: 13px;
+      margin-top: 8px;
+      font-family: monospace;
+      word-break: break-all;
     }
 
     .modal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.45);
+      background: rgba(0, 0, 0, 0.45);
       align-items: center;
       justify-content: center;
+      padding: 20px;
     }
 
     .modal-box {
       background: white;
-      width: 400px;
-      max-width: 90%;
+      width: 420px;
+      max-width: 100%;
       padding: 25px;
       border-radius: 14px;
+    }
+
+    .modal-box h2 {
+      margin-top: 0;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
     }
 
     input {
@@ -108,6 +154,25 @@
       font-size: 15px;
     }
 
+    input:focus {
+      outline: none;
+      border-color: #111827;
+    }
+
+    .secondary-button {
+      margin-left: 10px;
+      padding: 12px 18px;
+      border: 1px solid #d1d5db;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .secondary-button:hover {
+      background: #f3f4f6;
+    }
+
     .result {
       display: none;
       margin-top: 20px;
@@ -117,10 +182,21 @@
       border-radius: 8px;
     }
 
+    .result-label {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #374151;
+    }
+
     .code {
       font-family: monospace;
       word-break: break-all;
       margin-top: 5px;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -139,20 +215,32 @@
       Create and manage your application backends.
     </div>
 
+    <div class="status" id="statusBox">
+
+      <div class="status-title">
+        Backend Status
+      </div>
+
+      <div class="status-text" id="statusText">
+        Checking connection...
+      </div>
+
+    </div>
+
     <button class="button" onclick="openModal()">
       + Create Project
     </button>
 
     <div class="projects" id="projects">
-      <div style="color:#6b7280;">
+
+      <div id="emptyMessage" style="color:#6b7280;">
         No projects yet.
       </div>
+
     </div>
 
   </div>
 
-
-  <!-- CREATE PROJECT MODAL -->
 
   <div class="modal" id="modal">
 
@@ -160,44 +248,46 @@
 
       <h2>Create Project</h2>
 
-      <label>Project name</label>
+      <label for="projectName">
+        Project name
+      </label>
 
       <input
         id="projectName"
         type="text"
         placeholder="My Awesome App"
+        maxlength="100"
       >
 
-      <button class="button" onclick="createProject()">
+      <button
+        class="button"
+        id="createButton"
+        onclick="createProject()"
+      >
         Create Project
       </button>
 
       <button
+        class="secondary-button"
         onclick="closeModal()"
-        style="
-          margin-left:10px;
-          padding:12px 18px;
-          border:1px solid #ddd;
-          background:white;
-          border-radius:8px;
-          cursor:pointer;
-        "
       >
         Cancel
       </button>
 
       <div class="result" id="result">
 
-        <strong>Project created!</strong>
+        <strong>
+          Project created successfully!
+        </strong>
 
-        <div style="margin-top:12px;">
-          Project ID:
+        <div class="result-label">
+          Project ID
         </div>
 
         <div class="code" id="projectId"></div>
 
-        <div style="margin-top:12px;">
-          API Key:
+        <div class="result-label">
+          API Key
         </div>
 
         <div class="code" id="apiKey"></div>
@@ -211,44 +301,130 @@
 
   <script>
 
-    /*
-      IMPORTANT:
-      Replace this with your Google Apps Script URL.
-    */
-
     const GOOGLE_SCRIPT_URL =
       "https://script.google.com/a/macros/cathstu.tas.edu.au/s/AKfycbyBpl5cAgQrSZMrbOAxhEvgcGl7pZI3kjBprzSeOQhTn2ya44mDlRY9X7mBu5BEsxp_/exec";
 
 
+    window.addEventListener("load", function() {
+      testBackend();
+    });
+
+
     function openModal() {
+
       document.getElementById("modal").style.display = "flex";
+
+      document.getElementById("projectName").focus();
+
     }
 
 
     function closeModal() {
+
       document.getElementById("modal").style.display = "none";
+
+      document.getElementById("result").style.display = "none";
+
     }
 
 
     function generateId() {
 
-      return "proj_" +
+      const randomPart =
         Math.random()
           .toString(36)
           .substring(2, 10);
+
+      return "proj_" + randomPart;
 
     }
 
 
     function generateApiKey() {
 
-      return "pk_" +
-        Math.random()
-          .toString(36)
-          .substring(2, 18) +
+      const part1 =
         Math.random()
           .toString(36)
           .substring(2, 18);
+
+      const part2 =
+        Math.random()
+          .toString(36)
+          .substring(2, 18);
+
+      return "pk_" + part1 + part2;
+
+    }
+
+
+    async function testBackend() {
+
+      const statusBox =
+        document.getElementById("statusBox");
+
+      const statusText =
+        document.getElementById("statusText");
+
+
+      statusText.textContent =
+        "Connecting to Google Apps Script...";
+
+
+      try {
+
+        const response =
+          await fetch(
+            GOOGLE_SCRIPT_URL +
+            "?action=test"
+          );
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            "HTTP " + response.status
+          );
+
+        }
+
+
+        const data =
+          await response.json();
+
+
+        if (data.success) {
+
+          statusText.textContent =
+            "Connected to Google Apps Script";
+
+          statusBox.classList.remove("error");
+
+          statusBox.classList.add("success");
+
+        } else {
+
+          statusText.textContent =
+            "Backend responded with an error: " +
+            (data.error || "Unknown error");
+
+          statusBox.classList.remove("success");
+
+          statusBox.classList.add("error");
+
+        }
+
+
+      } catch (error) {
+
+        statusText.textContent =
+          "Could not connect to backend: " +
+          error.message;
+
+        statusBox.classList.remove("success");
+
+        statusBox.classList.add("error");
+
+      }
 
     }
 
@@ -256,7 +432,10 @@
     async function createProject() {
 
       const name =
-        document.getElementById("projectName").value.trim();
+        document
+          .getElementById("projectName")
+          .value
+          .trim();
 
 
       if (!name) {
@@ -268,18 +447,32 @@
       }
 
 
-      const projectId = generateId();
+      const projectId =
+        generateId();
 
-      const apiKey = generateApiKey();
+
+      const apiKey =
+        generateApiKey();
 
 
-      /*
-        Send the project to Google Sheets.
-      */
+      const button =
+        document.getElementById("createButton");
+
+
+      const modal =
+        document.getElementById("modal");
+
+
+      button.textContent =
+        "Creating...";
+
+
+      modal.classList.add("loading");
+
 
       try {
 
-        await fetch(
+        const url =
           GOOGLE_SCRIPT_URL +
           "?action=createProject" +
           "&projectId=" +
@@ -287,36 +480,79 @@
           "&projectName=" +
           encodeURIComponent(name) +
           "&apiKey=" +
-          encodeURIComponent(apiKey),
-          {
-            method: "GET"
-          }
-        );
+          encodeURIComponent(apiKey);
 
 
-        document.getElementById("projectId").textContent =
+        const response =
+          await fetch(url);
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            "HTTP " + response.status
+          );
+
+        }
+
+
+        const data =
+          await response.json();
+
+
+        if (!data.success) {
+
+          throw new Error(
+            data.error ||
+            "The backend rejected the project."
+          );
+
+        }
+
+
+        document
+          .getElementById("projectId")
+          .textContent =
           projectId;
 
-        document.getElementById("apiKey").textContent =
+
+        document
+          .getElementById("apiKey")
+          .textContent =
           apiKey;
 
-        document.getElementById("result").style.display =
+
+        document
+          .getElementById("result")
+          .style.display =
           "block";
 
 
         addProjectToScreen(
           projectId,
-          name
+          name,
+          apiKey
         );
+
+
+        document
+          .getElementById("projectName")
+          .value = "";
 
 
       } catch (error) {
 
-        console.error(error);
-
         alert(
-          "There was a problem connecting to the backend."
+          "Could not create the project.\n\n" +
+          error.message
         );
+
+      } finally {
+
+        button.textContent =
+          "Create Project";
+
+        modal.classList.remove("loading");
 
       }
 
@@ -325,7 +561,8 @@
 
     function addProjectToScreen(
       projectId,
-      projectName
+      projectName,
+      apiKey
     ) {
 
       const projects =
@@ -333,35 +570,99 @@
 
 
       const emptyMessage =
-        projects.querySelector("div[style]");
+        document.getElementById("emptyMessage");
+
 
       if (emptyMessage) {
+
         emptyMessage.remove();
+
       }
 
 
       const project =
         document.createElement("div");
 
-      project.className = "project";
+
+      project.className =
+        "project";
 
 
-      project.innerHTML = `
+      const nameElement =
+        document.createElement("div");
 
-        <div class="project-name">
-          ${projectName}
-        </div>
+      nameElement.className =
+        "project-name";
 
-        <div class="project-id">
-          ${projectId}
-        </div>
+      nameElement.textContent =
+        projectName;
 
-      `;
+
+      const idElement =
+        document.createElement("div");
+
+      idElement.className =
+        "project-id";
+
+      idElement.textContent =
+        "Project ID: " + projectId;
+
+
+      const keyElement =
+        document.createElement("div");
+
+      keyElement.className =
+        "project-key";
+
+      keyElement.textContent =
+        "API Key: " + apiKey;
+
+
+      project.appendChild(nameElement);
+
+      project.appendChild(idElement);
+
+      project.appendChild(keyElement);
 
 
       projects.appendChild(project);
 
     }
+
+
+    document
+      .getElementById("modal")
+      .addEventListener(
+        "click",
+        function(event) {
+
+          if (
+            event.target ===
+            document.getElementById("modal")
+          ) {
+
+            closeModal();
+
+          }
+
+        }
+      );
+
+
+    document
+      .getElementById("projectName")
+      .addEventListener(
+        "keydown",
+        function(event) {
+
+          if (event.key === "Enter") {
+
+            createProject();
+
+          }
+
+        }
+      );
 
   </script>
 
