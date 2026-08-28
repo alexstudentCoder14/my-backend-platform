@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>My Backend</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      color: #111827;
+    }
+
+    .navbar {
+      height: 64px;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      padding: 0 30px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 50px auto;
+      padding: 0 20px;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 35px;
+    }
+
+    .button {
+      background: #111827;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .button:hover {
+      background: #374151;
+    }
+
+    .projects {
+      margin-top: 25px;
+    }
+
+    .project {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+
+    .project-name {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .project-id {
+      color: #6b7280;
+      font-size: 13px;
+      margin-top: 6px;
+      font-family: monospace;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-box {
+      background: white;
+      width: 400px;
+      max-width: 90%;
+      padding: 25px;
+      border-radius: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0 20px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+
+    .result {
+      display: none;
+      margin-top: 20px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .code {
+      font-family: monospace;
+      word-break: break-all;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="navbar">
+    My Backend
+  </div>
+
+  <div class="container">
+
+    <h1>Projects</h1>
+
+    <div class="subtitle">
+      Create and manage your application backends.
+    </div>
+
+    <button class="button" onclick="openModal()">
+      + Create Project
+    </button>
+
+    <div class="projects" id="projects">
+      <div style="color:#6b7280;">
+        No projects yet.
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- CREATE PROJECT MODAL -->
+
+  <div class="modal" id="modal">
+
+    <div class="modal-box">
+
+      <h2>Create Project</h2>
+
+      <label>Project name</label>
+
+      <input
+        id="projectName"
+        type="text"
+        placeholder="My Awesome App"
+      >
+
+      <button class="button" onclick="createProject()">
+        Create Project
+      </button>
+
+      <button
+        onclick="closeModal()"
+        style="
+          margin-left:10px;
+          padding:12px 18px;
+          border:1px solid #ddd;
+          background:white;
+          border-radius:8px;
+          cursor:pointer;
+        "
+      >
+        Cancel
+      </button>
+
+      <div class="result" id="result">
+
+        <strong>Project created!</strong>
+
+        <div style="margin-top:12px;">
+          Project ID:
+        </div>
+
+        <div class="code" id="projectId"></div>
+
+        <div style="margin-top:12px;">
+          API Key:
+        </div>
+
+        <div class="code" id="apiKey"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <script>
+
+    /*
+      IMPORTANT:
+      Replace this with your Google Apps Script URL.
+    */
+
+    const GOOGLE_SCRIPT_URL =
+      "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE";
+
+
+    function openModal() {
+      document.getElementById("modal").style.display = "flex";
+    }
+
+
+    function closeModal() {
+      document.getElementById("modal").style.display = "none";
+    }
+
+
+    function generateId() {
+
+      return "proj_" +
+        Math.random()
+          .toString(36)
+          .substring(2, 10);
+
+    }
+
+
+    function generateApiKey() {
+
+      return "pk_" +
+        Math.random()
+          .toString(36)
+          .substring(2, 18) +
+        Math.random()
+          .toString(36)
+          .substring(2, 18);
+
+    }
+
+
+    async function createProject() {
+
+      const name =
+        document.getElementById("projectName").value.trim();
+
+
+      if (!name) {
+
+        alert("Please enter a project name.");
+
+        return;
+
+      }
+
+
+      const projectId = generateId();
+
+      const apiKey = generateApiKey();
+
+
+      /*
+        Send the project to Google Sheets.
+      */
+
+      try {
+
+        await fetch(
+          GOOGLE_SCRIPT_URL +
+          "?action=createProject" +
+          "&projectId=" +
+          encodeURIComponent(projectId) +
+          "&projectName=" +
+          encodeURIComponent(name) +
+          "&apiKey=" +
+          encodeURIComponent(apiKey),
+          {
+            method: "GET"
+          }
+        );
+
+
+        document.getElementById("projectId").textContent =
+          projectId;
+
+        document.getElementById("apiKey").textContent =
+          apiKey;
+
+        document.getElementById("result").style.display =
+          "block";
+
+
+        addProjectToScreen(
+          projectId,
+          name
+        );
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        alert(
+          "There was a problem connecting to the backend."
+        );
+
+      }
+
+    }
+
+
+    function addProjectToScreen(
+      projectId,
+      projectName
+    ) {
+
+      const projects =
+        document.getElementById("projects");
+
+
+      const emptyMessage =
+        projects.querySelector("div[style]");
+
+      if (emptyMessage) {
+        emptyMessage.remove();
+      }
+
+
+      const project =
+        document.createElement("div");
+
+      project.className = "project";
+
+
+      project.innerHTML = `
+
+        <div class="project-name">
+          ${projectName}
+        </div>
+
+        <div class="project-id">
+          ${projectId}
+        </div>
+
+      `;
+
+
+      projects.appendChild(project);
+
+    }
+
+  </script>
+
+</body>
+</html>
